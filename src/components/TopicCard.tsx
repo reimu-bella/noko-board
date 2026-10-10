@@ -7,6 +7,7 @@ import { SwipeControls } from "./SwipeControls";
 interface TopicCardProps {
   topic: TopicPost;
   collapsed: Record<string, boolean>;
+  unread: Record<string, boolean>;
   regeneratingNodeId: string | null;
   onToggle: (id: string) => void;
   onSimulateReply: (topicId: string, parentReplyId: string | null) => void;
@@ -17,11 +18,13 @@ interface TopicCardProps {
   onSwipeReply: (topicId: string, replyId: string, direction: -1 | 1) => void;
   onRegenerate: (topicId: string) => void;
   onRegenerateReply: (topicId: string, replyId: string) => void;
+  onToggleHiddenFromContext: (topicId: string) => void;
 }
 
 export function TopicCard({
   topic,
   collapsed,
+  unread,
   regeneratingNodeId,
   onToggle,
   onSimulateReply,
@@ -32,9 +35,11 @@ export function TopicCard({
   onSwipeReply,
   onRegenerate,
   onRegenerateReply,
+  onToggleHiddenFromContext,
 }: TopicCardProps) {
   const variant = getTopicVariant(topic);
   const isCollapsed = collapsed[topic.id] ?? false;
+  const hasUnread = isCollapsed && !!unread[topic.id];
   const replyCount = countReplyTree(topic.replies);
   const isRegenerating = regeneratingNodeId === topic.id;
 
@@ -48,7 +53,18 @@ export function TopicCard({
 
   return (
     <article
-      className={`rounded-lg border border-slate-200 p-4 shadow-sm ${isRegenerating ? "bg-amber-50" : "bg-white"}`}
+      data-unread={hasUnread ? "true" : undefined}
+      className={`rounded-lg border p-4 shadow-sm ${
+        isRegenerating
+          ? "border-slate-200 bg-amber-50"
+          : hasUnread
+            ? topic.hiddenFromContext
+              ? "border-dashed border-sky-300 bg-sky-50"
+              : "border-sky-200 bg-sky-50"
+            : topic.hiddenFromContext
+              ? "border-dashed border-slate-300 bg-slate-50"
+              : "border-slate-200 bg-white"
+      }`}
     >
       <header className="mb-2 flex flex-wrap items-start justify-between gap-2">
         <div>
@@ -59,13 +75,23 @@ export function TopicCard({
             {variant.source === "human" ? "human" : "simulated"}
             {" · "}
             {new Date(variant.createdAt).toLocaleString()}
+            {topic.hiddenFromContext && (
+              <>
+                {" · "}
+                <span className="font-medium text-amber-800">Hidden from context</span>
+              </>
+            )}
           </p>
         </div>
         {replyCount > 0 && (
           <button
             type="button"
             onClick={() => onToggle(topic.id)}
-            className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+            className={`rounded border px-2 py-1 text-xs ${
+              hasUnread
+                ? "border-sky-300 bg-sky-100 text-sky-800 hover:bg-sky-200"
+                : "border-slate-200 text-slate-600 hover:bg-slate-50"
+            }`}
           >
             {isCollapsed ? `▶ Show ${replyCount} replies` : "▼ Hide replies"}
           </button>
@@ -101,6 +127,19 @@ export function TopicCard({
         </button>
         <button
           type="button"
+          aria-pressed={topic.hiddenFromContext}
+          title="Exclude this thread from the board context used when generating replies"
+          onClick={() => onToggleHiddenFromContext(topic.id)}
+          className={`rounded border px-2 py-1 text-xs ${
+            topic.hiddenFromContext
+              ? "border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-200"
+              : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+          }`}
+        >
+          Hide from Context
+        </button>
+        <button
+          type="button"
           onClick={handleDelete}
           className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
         >
@@ -117,6 +156,7 @@ export function TopicCard({
               topicId={topic.id}
               depth={0}
               collapsed={collapsed}
+              unread={unread}
               regeneratingNodeId={regeneratingNodeId}
               onToggle={onToggle}
               onSimulateReply={onSimulateReply}

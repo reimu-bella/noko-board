@@ -15,10 +15,15 @@ function serializeReply(reply: ReplyNode, depth: number): string {
   return text;
 }
 
-export function serializeBoard(topics: TopicPost[]): string {
-  if (topics.length === 0) return "(empty board)";
+export function topicsInBoardContext(topics: TopicPost[]): TopicPost[] {
+  return topics.filter((topic) => !topic.hiddenFromContext);
+}
 
-  return topics
+export function serializeBoard(topics: TopicPost[]): string {
+  const visible = topicsInBoardContext(topics);
+  if (visible.length === 0) return "(empty board)";
+
+  return visible
     .map((topic) => {
       const variant = getTopicVariant(topic);
       let text = `[topic id=${topic.id}] @${variant.username} — "${variant.subject}"\n`;

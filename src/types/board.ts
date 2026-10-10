@@ -27,6 +27,8 @@ export interface TopicPost {
   variants: TopicVariant[];
   activeVariant: number;
   createdAt: string;
+  /** When true, this thread is omitted from the board context used to generate replies. */
+  hiddenFromContext: boolean;
   replies: ReplyNode[];
 }
 

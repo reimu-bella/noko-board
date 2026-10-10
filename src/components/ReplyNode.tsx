@@ -14,6 +14,7 @@ interface ReplyNodeViewProps {
   topicId: string;
   depth: number;
   collapsed: Record<string, boolean>;
+  unread: Record<string, boolean>;
   regeneratingNodeId: string | null;
   onToggle: (id: string) => void;
   onSimulateReply: (topicId: string, parentReplyId: string) => void;
@@ -28,6 +29,7 @@ export function ReplyNodeView({
   topicId,
   depth,
   collapsed,
+  unread,
   regeneratingNodeId,
   onToggle,
   onSimulateReply,
@@ -38,6 +40,7 @@ export function ReplyNodeView({
 }: ReplyNodeViewProps) {
   const variant = getReplyVariant(reply);
   const isCollapsed = collapsed[reply.id] ?? false;
+  const hasUnread = isCollapsed && !!unread[reply.id];
   const childCount = countReplies(reply.replies);
   const isRegenerating = regeneratingNodeId === reply.id;
 
@@ -51,17 +54,20 @@ export function ReplyNodeView({
 
   return (
     <div
-      className="border-l-2 border-slate-200 pl-3"
+      className={`border-l-2 pl-3 ${hasUnread ? "border-sky-300" : "border-slate-200"}`}
       style={{ marginLeft: depth > 0 ? 0 : undefined }}
     >
       <article
-        className={`rounded-md px-3 py-2 ${isRegenerating ? "bg-amber-50" : "bg-slate-50"}`}
+        data-unread={hasUnread ? "true" : undefined}
+        className={`rounded-md px-3 py-2 ${
+          isRegenerating ? "bg-amber-50" : hasUnread ? "bg-sky-50" : "bg-slate-50"
+        }`}
       >
         <header className="mb-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
           <button
             type="button"
             onClick={() => onToggle(reply.id)}
-            className="font-medium text-slate-600 hover:text-slate-900"
+            className={`font-medium hover:text-slate-900 ${hasUnread ? "text-sky-700" : "text-slate-600"}`}
             disabled={childCount === 0}
           >
             {childCount > 0 ? (isCollapsed ? "▶" : "▼") : "•"}{" "}
@@ -113,6 +119,7 @@ export function ReplyNodeView({
               topicId={topicId}
               depth={depth + 1}
               collapsed={collapsed}
+              unread={unread}
               regeneratingNodeId={regeneratingNodeId}
               onToggle={onToggle}
               onSimulateReply={onSimulateReply}

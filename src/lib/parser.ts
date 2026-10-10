@@ -79,6 +79,7 @@ export function parseInitResponse(raw: string, expectedCount: number): TopicPost
     id: newId(),
     createdAt,
     activeVariant: 0,
+    hiddenFromContext: false,
     variants: [
       {
         username: requireString(post.username, "username"),
@@ -134,6 +135,7 @@ export function parseGenerateResponse(
         id: newId(),
         createdAt,
         activeVariant: 0,
+        hiddenFromContext: false,
         variants: [
           {
             username: requireString(topic.username, "username"),

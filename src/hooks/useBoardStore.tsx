@@ -27,6 +27,7 @@ import {
   buildTargetedReplyPrompt,
 } from "../lib/prompts";
 import { loadState, saveState } from "../lib/storage";
+import { topicsInBoardContext } from "../lib/serialize";
 import {
   addReplyVariant,
   addTopicVariant,
@@ -61,7 +62,8 @@ type BoardAction =
   | { type: "ADD_TOPIC_VARIANT"; topicId: string; variant: TopicVariant }
   | { type: "ADD_REPLY_VARIANT"; topicId: string; replyId: string; variant: ReplyVariant }
   | { type: "SET_TOPIC_VARIANT"; topicId: string; index: number }
-  | { type: "SET_REPLY_VARIANT"; topicId: string; replyId: string; index: number };
+  | { type: "SET_REPLY_VARIANT"; topicId: string; replyId: string; index: number }
+  | { type: "TOGGLE_HIDDEN_FROM_CONTEXT"; topicId: string };
 
 function addReplyToTree(
   replies: ReplyNode[],
@@ -240,6 +242,14 @@ function boardReducer(state: BoardState, action: BoardAction): BoardState {
       });
       return { ...state, topics };
     }
+    case "TOGGLE_HIDDEN_FROM_CONTEXT": {
+      const topics = state.topics.map((topic) =>
+        topic.id === action.topicId
+          ? { ...topic, hiddenFromContext: !topic.hiddenFromContext }
+          : topic,
+      );
+      return { ...state, topics };
+    }
     case "CLEAR_BOARD":
       return { ...state, topics: [] };
     default:
@@ -271,6 +281,7 @@ interface BoardContextValue {
   initializeBoard: (topicCount: number) => Promise<void>;
   generateBoard: (newTopicCount: number, newReplyCount: number) => Promise<void>;
   simulateReply: (topicId: string, parentReplyId: string | null) => Promise<void>;
+  toggleHiddenFromContext: (topicId: string) => void;
 }
 
 const BoardContext = createContext<BoardContextValue | null>(null);
@@ -353,6 +364,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
           id: crypto.randomUUID(),
           createdAt,
           activeVariant: 0,
+          hiddenFromContext: false,
           variants: [
             {
               username: username.trim(),
@@ -508,9 +520,10 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   const generateBoard = useCallback(
     async (newTopicCount: number, newReplyCount: number) => {
       await runLlm(async () => {
+        const contextTopics = topicsInBoardContext(state.topics);
         const prompt = buildGeneratePrompt(
           state.settings,
-          state.topics,
+          contextTopics,
           newTopicCount,
           newReplyCount,
         );
@@ -518,14 +531,18 @@ export function BoardProvider({ children }: { children: ReactNode }) {
           [{ role: "user", content: prompt }],
           { apiKey: state.settings.apiKey, model: state.settings.model },
         );
-        const topicIds = new Set(state.topics.map((t) => t.id));
-        const replyIds = collectReplyIds(state.topics);
+        const topicIds = new Set(contextTopics.map((t) => t.id));
+        const replyIds = collectReplyIds(contextTopics);
         const batch = parseGenerateResponse(raw, topicIds, replyIds);
         dispatch({ type: "MERGE_GENERATE_BATCH", batch });
       });
     },
     [runLlm, state.settings, state.topics],
   );
+
+  const toggleHiddenFromContext = useCallback((topicId: string) => {
+    dispatch({ type: "TOGGLE_HIDDEN_FROM_CONTEXT", topicId });
+  }, []);
 
   const simulateReply = useCallback(
     async (topicId: string, parentReplyId: string | null) => {
@@ -576,6 +593,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       initializeBoard,
       generateBoard,
       simulateReply,
+      toggleHiddenFromContext,
     }),
     [
       state,
@@ -597,6 +615,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       initializeBoard,
       generateBoard,
       simulateReply,
+      toggleHiddenFromContext,
     ],
   );
 

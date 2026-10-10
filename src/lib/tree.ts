@@ -98,3 +98,31 @@ export function countReplyTree(replies: ReplyNode[]): number {
     0,
   );
 }
+
+function replyPath(
+  replies: ReplyNode[],
+  replyId: string,
+  trail: string[] = [],
+): string[] | null {
+  for (const reply of replies) {
+    const next = [...trail, reply.id];
+    if (reply.id === replyId) return next;
+    const nested = replyPath(reply.replies, replyId, next);
+    if (nested) return nested;
+  }
+  return null;
+}
+
+/** Topic and parent replies that currently hide this reply. */
+export function collapsedAncestorIds(
+  topics: TopicPost[],
+  replyId: string,
+  isCollapsed: (id: string) => boolean,
+): string[] {
+  for (const topic of topics) {
+    const path = replyPath(topic.replies, replyId);
+    if (!path) continue;
+    return [topic.id, ...path.slice(0, -1)].filter(isCollapsed);
+  }
+  return [];
+}

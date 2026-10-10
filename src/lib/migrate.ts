@@ -27,6 +27,7 @@ interface LegacyTopicPost {
   replies: LegacyReplyNode[];
   variants?: TopicVariant[];
   activeVariant?: number;
+  hiddenFromContext?: boolean;
 }
 
 function migrateReply(reply: LegacyReplyNode): ReplyNode {
@@ -55,12 +56,15 @@ function migrateReply(reply: LegacyReplyNode): ReplyNode {
 }
 
 function migrateTopic(topic: LegacyTopicPost): TopicPost {
+  const hiddenFromContext = topic.hiddenFromContext === true;
+
   if (topic.variants && topic.variants.length > 0) {
     return {
       id: topic.id,
       createdAt: topic.createdAt,
       variants: topic.variants,
       activeVariant: topic.activeVariant ?? 0,
+      hiddenFromContext,
       replies: topic.replies.map(migrateReply),
     };
   }
@@ -69,6 +73,7 @@ function migrateTopic(topic: LegacyTopicPost): TopicPost {
     id: topic.id,
     createdAt: topic.createdAt,
     activeVariant: 0,
+    hiddenFromContext,
     variants: [
       {
         username: topic.username ?? "unknown",

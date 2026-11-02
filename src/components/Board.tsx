@@ -62,6 +62,19 @@ export function Board() {
     });
   };
 
+  const collapsibleTopics = state.topics.filter((topic) => topic.replies.length > 0);
+  const allCollapsed =
+    collapsibleTopics.length > 0 &&
+    collapsibleTopics.every((topic) => collapsed[topic.id]);
+
+  const collapseAll = () => {
+    setCollapsed((prev) => {
+      const next = { ...prev };
+      for (const topic of collapsibleTopics) next[topic.id] = true;
+      return next;
+    });
+  };
+
   const handleHumanReply = (topicId: string, parentReplyId: string | null) => {
     window.dispatchEvent(
       new CustomEvent<ReplyTarget>("noko:focus-compose", {
@@ -86,6 +99,18 @@ export function Board() {
 
   return (
     <div className="space-y-4">
+      {collapsibleTopics.length > 0 && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={collapseAll}
+            disabled={allCollapsed}
+            className="rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:cursor-default disabled:opacity-50 disabled:hover:bg-slate-50"
+          >
+            Collapse all
+          </button>
+        </div>
+      )}
       {state.topics.map((topic) => (
         <TopicCard
           key={topic.id}

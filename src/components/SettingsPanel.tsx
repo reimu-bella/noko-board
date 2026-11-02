@@ -54,7 +54,10 @@ export function SettingsPanel() {
           onChange={(e) => setSettings({ model: e.target.value })}
           className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
         >
-          {AVAILABLE_MODELS.map((model) => (
+          {(AVAILABLE_MODELS.includes(settings.model)
+            ? AVAILABLE_MODELS
+            : [settings.model, ...AVAILABLE_MODELS]
+          ).map((model) => (
             <option key={model} value={model}>
               {model}
             </option>
